@@ -1,0 +1,15 @@
+{
+    "active": true,
+    "emitterType": 1,
+    "maxParticles": 50,
+    "lifeSpan": 20,
+    "startSize": 10,
+    "startSizeVar": 2,
+    "finishSize": 0,
+    "finishSizeVar": 0,
+    "maxRadius": 50,
+    "degreesPerSecond": 0,
+    "degreesPerSecondVar": 40,
+    "startColor": [0, 255, 90, 1.0],
+    "finishColor": [80, 90, 255, 0.2]
+}

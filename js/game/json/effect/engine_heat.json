@@ -1,0 +1,12 @@
+{
+    "maxParticles": 20,
+    "lifeSpan": 15,
+    "lifeSpanVar": 5,
+    "startSize": 25,
+    "startSizeVar": 0,
+    "emitAngle": 90,
+    "speed": 2,
+    "speedVar": 0,
+    "startColor": [255,118,0,1],
+    "finishColor": [0,80,255,1]
+}

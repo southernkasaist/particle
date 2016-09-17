@@ -1,0 +1,16 @@
+{
+    "active": true,
+    "maxParicles": 5,
+    "startSize": 5,
+    "startSizeVar": 0,
+    "finishSize": 0,
+    "finishSizeVar": 0,
+    "speed": 10,
+    "duration": -1,
+    "startRotation": 0,
+    "lifeSpan": 2,
+    "radialAcceleration": 2,
+    "radialAccelerationVar": 0.5,
+    "startColor": [0, 80, 255, 1.0],
+    "finishColor": [0, 80, 255, 0.2]
+}

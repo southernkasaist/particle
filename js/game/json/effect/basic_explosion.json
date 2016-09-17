@@ -1,0 +1,14 @@
+{
+    "active": false,
+    "maxParicles": 5,
+    "speed": 3,
+    "speedVar": 2,
+    "duration": 6,
+    "lifeSpan": 2,
+    "emitAngleVar": 270,
+    "startSize": 30,
+    "startSizeVar": 10,
+    "startRotation": 0,
+    "startColor": [255, 118, 80, 1],
+    "finishColor": [255, 118, 0, 0.6]
+}

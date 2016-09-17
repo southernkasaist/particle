@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="content-type" content="text/html; charset=UTF-8"/>
+        <meta name="viewport" content="width=device-width; initial-scale=1; maximum-scale=1; user-scalable=no;"/>
+        <title>The Particle System Plug-in for Arctic.js</title>
+        <link rel="stylesheet" type="text/css" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8/themes/ui-darkness/jquery-ui.css"/>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.0/jquery.min.js"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.23/jquery-ui.min.js"></script>
+        <style>
+            html, body{
+                margin:0;
+                padding:0;
+                width:100%;
+                height:100%;
+                background-color: #000000;
+                color: #dfdfdf;
+                font-size: small;
+            }
+            input {
+                margin:0;
+                padding:0;
+            }
+            .box {
+                float:left;
+                position: relative;
+                border:solid #666666 2px;
+                border-radius:15px;
+                margin:10px 5px 0 5px;
+                padding:0px 5px 0px 5px;
+                background-color:#3A3A3A;
+            }
+            .cfgWidth {
+                width: 280px;
+            }
+            .cfgColorWidth {
+                width: 260px;
+            }
+            .ctrlSlider {
+                float: left;
+                clear: left;
+                width: 150px;
+                height: 12px;
+                margin: 5px;
+            }
+            .ctrlSliderColor {
+                float: left;
+                clear: left;
+                width: 120px;
+                height: 12px;
+                margin: 5px 5px 5px 10px;
+            }
+            .group {
+                float: left;
+                width: 100%;
+                margin: 10px 0px;
+                padding: 0px;
+                border-collapse:collapse;
+            }
+            .group caption {
+                padding: 6px;
+                margin: 5px;
+                font-size: large;
+            }
+            .group td {
+                padding: 2px;
+                margin: 0px;
+            }
+            .group .ui-slider-range { background: #dfdfdf; }
+            .group .ui-slider-handle { border-color: #dfdfdf; }
+            .tag {
+                width: 30px;
+                margin: 0;
+                padding: 0;
+            }
+            .preview {
+                width: 80px;
+                height: 80px;
+                margin-top: 20px;
+                margin-left: 160px;
+                border: solid 2px #ffffff;
+                background-image: none;
+            }
+            .sizeTexture{
+                width: 80px;
+                height: 80px;
+            }
+            #textureDiv {
+                border: solid 2px #ffffff;
+                text-align: center;
+                margin: 0;
+            }
+
+            .red .ui-slider-range { background: #ef2929; }
+            .red .ui-slider-handle { border-color: #ef2929; }
+            .green .ui-slider-range { background: #8ae234; }
+            .green .ui-slider-handle { border-color: #8ae234; }
+            .blue .ui-slider-range { background: #729fef; }
+            .blue .ui-slider-handle { border-color: #729fef; }
+            .alpha .ui-slider-range { background: #dfdfdf; }
+            .alpha .ui-slider-handle { border-color: #dfdfdf; }
+        </style>
+        <script>
+            function hexFromRGB(r, g, b) {
+                var hex = [
+                    r.toString( 16 ),
+                    g.toString( 16 ),
+                    b.toString( 16 )
+                ];
+                $.each( hex, function( nr, val ) {
+                    if ( val.length === 1 ) {
+                        hex[ nr ] = "0" + val;
+                    }
+                });
+                return hex.join( "" ).toUpperCase();
+            }
+            
+            function refreshPreview(label, red, green, blue, alpha) {
+                var hex = hexFromRGB(red, green, blue);
+                var preview = document.getElementById(label + "Preview");
+                preview.style.backgroundColor = "#" + hex;
+                preview.style.opacity = alpha;
+            }
+            
+            var gravityGroup, radialGroup, gObj;
+            function initEmitterType(o) {
+                gObj = gObj ? gObj : o;
+                var g = document.getElementById("radioGravity"),
+                r = document.getElementById("radioRadial");
+                if(gObj['emitterType'] == 0){
+                    g.checked = true;
+                }else{
+                    r.checked = true;
+                }
+                $( "#emitType" ).buttonset();
+            }
+            function changeEmitterType() {
+                var emitModeBox = document.getElementById("emitModeBox");
+                if(document.getElementById("radioGravity").checked) {
+                    gObj['emitterType'] = 0;
+                    if(gravityGroup && radialGroup) {
+                        emitModeBox.appendChild(gravityGroup);
+                        emitModeBox.removeChild(radialGroup);
+                    }
+                    else {
+                        gravityGroup = document.getElementById("gravityGroup");
+                        radialGroup = document.getElementById("radialGroup");
+                        emitModeBox.removeChild(radialGroup);
+                    }
+                } else {
+                    gObj['emitterType'] = 1;
+                    if(gravityGroup && radialGroup) {
+                        emitModeBox.appendChild(radialGroup);
+                        emitModeBox.removeChild(gravityGroup);
+                    }
+                    else {
+                        gravityGroup = document.getElementById("gravityGroup");
+                        radialGroup = document.getElementById("radialGroup");
+                        emitModeBox.removeChild(gravityGroup);
+                    }
+                }
+            }
+            
+            function changeCfgValue(input) {
+                var s = $('#' + input.parentElement.previousSibling.childNodes[0].id);
+                var val = parseFloat(input.value);
+                if(isNaN(val)) {
+                    input.value = parseFloat(s.attr('value'));
+                    return;
+                }
+                var min = parseFloat(s.attr('min'));
+                var max = parseFloat(s.attr('max'));
+                val = val < min ? min : (val > max ? max : val);
+                s.slider('value',val);
+                s.trigger('slide',{ ui: $('.ui-slider-handle', s), value: val });
+                input.value = val;
+            }
+            
+            function initEnableTexture(o) {
+                gObj = gObj ? gObj : o;
+                document.getElementById("enableTexture").checked = gObj['enableTexture'];
+                $( "#enableTexture" ).button();
+            }
+            function toggleEnableTexture() {
+                gObj['enableTexture'] = document.getElementById("enableTexture").checked;
+            }
+            
+            var loadTextureFile = (function () {
+                var reader = new FileReader(),
+                filter = /^(?:image\/bmp|image\/cis\-cod|image\/gif|image\/ief|image\/jpeg|image\/jpeg|image\/jpeg|image\/pipeg|image\/png|image\/svg\+xml|image\/tiff|image\/x\-cmu\-raster|image\/x\-cmx|image\/x\-icon|image\/x\-portable\-anymap|image\/x\-portable\-bitmap|image\/x\-portable\-graymap|image\/x\-portable\-pixmap|image\/x\-rgb|image\/x\-xbitmap|image\/x\-xpixmap|image\/x\-xwindowdump)$/i,
+                name;
+                reader.onload = function (evt) {
+                    var data = evt.target.result;
+                    var texture = document.getElementById("texture");
+                    texture.alt = name;
+                    texture.src = data;
+                    var img = document.createElement('img');
+                    img.src = data;
+                    img.onload = function(e) {
+                        gObj['setTexture'](img);
+                        document.getElementById("textureSize").innerHTML = name + "<br/>" + img.width + " * " + img.height;
+                    }
+                }
+
+                return function () {
+                    var files = document.getElementById("textureFile").files;
+                    if (files.length == 0) { return; }
+                    if (!filter.test(files[0].type)) { alert("You must select a valid image file!"); return; }
+                    name = files[0].name;
+                    reader.readAsDataURL(files[0]);
+                }
+            })();
+            
+            function saveAsJSON(){
+                if(gObj) {
+                    var json = gObj['saveAsJSON']();
+                    var uriContent = "data:application/octet-stream," + encodeURIComponent(json);
+                    window.open(uriContent, 'JSON');
+                }
+            }
+            
+            function changeIPhoneType() {
+                if(document.getElementById("iphoneBlack").checked) {
+                    document.getElementById('iphone').src = "img/editor/iphone_black.png";
+                } else {
+                    document.getElementById('iphone').src = "img/editor/iphone_white.png";
+                }
+            }
+            
+            $(function() {
+                (function( $ ){
+                    $.fn.slidifyColor = function( options ){
+                        var settings = jQuery.extend({
+                            max: 100,
+                            min: 0,
+                            step: 1,
+                            bind: true
+                        }, options);
+
+                        return this.each(function(){
+                            $(this).slider({
+                                value: (options.prop == 3 ? ~~(settings.obj[options.prop] * 255) : settings.obj[options.prop]), 
+                                max:options.max, 
+                                min: options.min || settings.min,
+                                step: settings.step,
+                                slide:function( e,ui ){ 
+                                    if(settings.bind){
+                                        settings.obj[ settings.prop ] = settings.prop == 3 ? ui.value / 255 : ui.value;
+                                        var pe = settings.parent;
+                                        var label = settings.label;
+                                        refreshPreview(label, pe[label][0], pe[label][1], pe[label][2], pe[label][3]);
+                                    }
+                                },
+                                change:function(e,ui){ 
+                                    if( settings.bind ){
+                                        settings.obj[ settings.prop ] = settings.prop == 3 ? ui.value / 255 : ui.value;
+                                        var pe = settings.parent;
+                                        var label = settings.label;
+                                        refreshPreview(label, pe[label][0], pe[label][1], pe[label][2], pe[label][3]);
+                                    }
+                                }
+                            }).addClass( "ctrlSliderColor" );
+                        });
+                    };
+                })( jQuery );
+                
+                (function( $ ){
+                    $.fn.slidify = function( options ){
+                        var settings = jQuery.extend({
+                            max: 100,
+                            min: 0,
+                            step: 1,
+                            bind: true
+                        }, options);
+
+                        return this.each(function(){
+                            $(this).attr('max', options.max);
+                            $(this).attr('min', options.min || settings.min);
+                            $(this).attr('value', $(this).attr('min'));
+                            $(this).slider({
+                                value: settings.obj[ options.prop ], 
+                                max:options.max, 
+                                min: options.min || settings.min,
+                                step: options.step || settings.step,
+                                slide:function( e,ui ){ 
+                                    if(settings.bind){
+                                        settings.obj[ settings.prop ] = ui.value;
+                                        $(this).attr('value', ui.value);
+                                        ui.handle.parentElement.parentElement.nextSibling.childNodes[0].value = ui.value;
+                                    }
+                                },
+                                change:function(e,ui){ 
+                                    if( settings.bind ){
+                                        settings.obj[ settings.prop ] = ui.value;
+                                        $(this).attr('value', ui.value);
+                                        ui.handle.parentElement.parentElement.nextSibling.childNodes[0].value = ui.value;
+                                    }
+                                }
+                            }).addClass( "ctrlSlider" );
+                        });
+                    };
+                })( jQuery );
+                $( "#iphoneType" ).buttonset();
+                $( "#save" ).button();
+            });
+        </script>
+    </head>
+    <body>
+        <div id="display" style="float:left;">
+            <img id="iphone" src="img/editor/iphone_black.png"/>
+            <canvas id="canvas" style="position:absolute;left:47px;top:147px;"></canvas>
+            <script type="text/javascript" src="js/arctic.js"></script>
+            <script type="text/javascript" src="js/particle.js"></script>
+            <script type="text/javascript" src="js/editor.js"></script>
+        </div>
+        <div style="float:left;">
+            <table>
+                <tr>
+                    <td>
+                        <div class="box cfgWidth">
+                            <table class="group">
+                                <caption><b>Common Configuration</b></caption>
+                                <tr>
+                                    <td>
+                                        <div id="iphoneType" style="margin:5px 0;text-align:center;">
+                                            <input type="radio" id="iphoneBlack" name="iphoneTypeBtn" style="max-height:20px;" checked="checked" onchange="changeIPhoneType()"/>
+                                            <label for="iphoneBlack">Black</label>
+                                            <input type="radio" id="iphoneWhite" name="iphoneTypeBtn" style="max-height:20px;" onchange="changeIPhoneType()"/>
+                                            <label for="iphoneWhite">White</label>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div style="margin:5px 0;text-align:center;">
+                                            <button id="save" onclick="saveAsJSON()">Save As JSON</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div class="box cfgWidth">
+                            <table class="group">
+                                <caption><b>Particle Configuration</b></caption>
+                                <tr><td>Max. Particles</td><td><div id="maxParticles"></div></td><td><input id="maxParticlesTag" onchange="changeCfgValue(this)" type="text" class="tag ui-state-default ui-corner-all ui-helper-clearfix"/></td></tr>
+                                <tr><td>Life Span</td><td><div id="lifeSpan"></div></td><td><input id="lifeSpanTag" onchange="changeCfgValue(this)" type="text" class="tag ui-state-default ui-corner-all ui-helper-clearfix"/></td></tr>
+                                <tr><td>Life Span Var.</td><td><div id="lifeSpanVar"></div></td><td><input id="lifeSpanVarTag" onchange="changeCfgValue(this)" type="text" class="tag ui-state-default ui-corner-all ui-helper-clearfix"/></td></tr>
+                                <tr><td>Start Size</td><td><div id="startSize"></div></td><td><input id="startSizeTag" onchange="changeCfgValue(this)" type="text" class="tag ui-state-default ui-corner-all ui-helper-clearfix"/></td></tr>
+                                <tr><td>Start Size Var.</td><td><div id="startSizeVar"></div></td><td><input id="startSizeVarTag" onchange="changeCfgValue(this)" type="text" class="tag ui-state-default ui-corner-all ui-helper-clearfix"/></td></tr>
+                                <tr><td>Finish Size</td><td><div id="finishSize"></div></td><td><input id="finishSizeTag" onchange="changeCfgValue(this)" type="text" class="tag ui-state-default ui-corner-all ui-helper-clearfix"/></td></tr>
+                                <tr><td>Finish Size Var.</td><td><div id="finishSizeVar"></div></td><td><input id="finishSizeVarTag" onchange="changeCfgValue(this)" type="text" class="tag ui-state-default ui-corner-all ui-helper-clearfix"/></td></tr>
+                                <tr><td>Emit Ang.</td><td><div id="emitAngle"></div></td><td><input id="emitAngleTag" onchange="changeCfgValue(this)" type="text" class="tag ui-state-default ui-corner-all ui-helper-clearfix"/></td></tr>
+                                <tr><td>Emit Ang. Var.</td><td><div id="emitAngleVar"></div></td><td><input id="emitAngleVarTag" onchange="changeCfgValue(this)" type="text" class="tag ui-state-default ui-corner-all ui-helper-clearfix"/></td></tr>
+                                <tr><td>Start Rot.</td><td><div id="startRotation"></div></td><td><input id="startRotationTag" onchange="changeCfgValue(this)" type="text" class="tag ui-state-default ui-corner-all ui-helper-clearfix"/></td></tr>
+                                <tr><td>Start Rot. Var.</td><td><div id="startRotationVar"></div></td><td><input id="startRotationVarTag" onchange="changeCfgValue(this)" type="text" class="tag ui-state-default ui-corner-all ui-helper-clearfix"/></td></tr>
+                                <tr><td>End Rot.</td><td><div id="endRotation"></div></td><td><input id="endRotationTag" onchange="changeCfgValue(this)" type="text" class="tag ui-state-default ui-corner-all ui-helper-clearfix"/></td></tr>
+                                <tr><td>End Rot. Var.</td><td><div id="endRotationVar"></div></td><td><input id="endRotationVarTag" onchange="changeCfgValue(this)" type="text" class="tag ui-state-default ui-corner-all ui-helper-clearfix"/></td></tr>
+                                <tr><td>Start Rad. Grad.</td><td><div id="startRadialGradient"></div></td><td><input id="startRadialGradientTag" onchange="changeCfgValue(this)" type="text" class="tag ui-state-default ui-corner-all ui-helper-clearfix"/></td></tr>
+                                <tr><td>End Rad. Grad.</td><td><div id="endRadialGradient"></div></td><td><input id="endRadialGradientTag" onchange="changeCfgValue(this)" type="text" class="tag ui-state-default ui-corner-all ui-helper-clearfix"/></td></tr>
+                            </table>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div style="float:left;">
+            <table>
+                <tr>
+                    <td>
+                        <div class="box cfgWidth">
+                            <div style="float:left;text-align:center;height:100px;padding-top:20px;margin-left:15px;">
+                                <input type="checkbox" id="enableTexture" onchange="toggleEnableTexture()"/><label for="enableTexture">Enable Texture</label>
+                                <div id="textureSize" style="margin-top:10px;height:30px;text-align:center;"></div>
+                            </div>
+                            <div style="float:left;text-align:center;width:90px;height:100px;padding-top:15px;margin-left:25px;">
+                                <div id="textureDiv" class="ui-widget-content ui-corner-all sizeTexture" onclick="$('#textureFile').trigger('click');">
+                                    <img id="texture" class="sizeTexture" alt="" src=""/>
+                                </div>
+                                <input id="textureFile" type="file" style="visibility:hidden;" onchange="loadTextureFile();"/>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div id="emitModeBox" class="box cfgWidth">
+                            <div style="text-align:center;margin-bottom:10px;">
+                                <div id="emitType" style="margin-top:20px;">
+                                    <input type="radio" id="radioGravity" name="emitTypeBtn" style="max-height:20px;" checked="checked" onchange="changeEmitterType()"/>
+                                    <label for="radioGravity">Gravity</label>
+                                    <input type="radio" id="radioRadial" name="emitTypeBtn" style="max-height:20px;" onchange="changeEmitterType()"/>
+                                    <label for="radioRadial">Radial</label>
+                                </div>
+                            </div>
+                            <table id="gravityGroup" class="group">
+                                <caption><b>Gravity Configuration</b></caption>
+                                <tr><td>Emit X Var.</td><td><div id="emitXVar"></div></td><td><input id="emitXVarTag" onchange="changeCfgValue(this)" type="text" class="tag ui-state-default ui-corner-all ui-helper-clearfix"/></td></tr>
+                                <tr><td>Emit Y Var.</td><td><div id="emitYVar"></div></td><td><input id="emitYVarTag" onchange="changeCfgValue(this)" type="text" class="tag ui-state-default ui-corner-all ui-helper-clearfix"/></td></tr>
+                                <tr><td>Speed</td><td><div id="speed"></div></td><td><input id="speedTag" onchange="changeCfgValue(this)" type="text" class="tag ui-state-default ui-corner-all ui-helper-clearfix"/></td></tr>
+                                <tr><td>Speed Var.</td><td><div id="speedVar"></div></td><td><input id="speedVarTag" onchange="changeCfgValue(this)" type="text" class="tag ui-state-default ui-corner-all ui-helper-clearfix"/></td></tr>
+                                <tr><td>GravityX</td><td><div id="gravityX"></div></td><td><input id="gravityXTag" onchange="changeCfgValue(this)" type="text" class="tag ui-state-default ui-corner-all ui-helper-clearfix"/></td></tr>
+                                <tr><td>GravityY</td><td><div id="gravityY"></div></td><td><input id="gravityYTag" onchange="changeCfgValue(this)" type="text" class="tag ui-state-default ui-corner-all ui-helper-clearfix"/></td></tr>
+                                <tr><td>Rad. Acc.</td><td><div id="radialAcceleration"></div></td><td><input id="radialAccelerationTag" onchange="changeCfgValue(this)" type="text" class="tag ui-state-default ui-corner-all ui-helper-clearfix"/></td></tr>
+                                <tr><td>Rad. Acc. Var.</td><td><div id="radialAccelerationVar"></div></td><td><input id="radialAccelerationVarTag" onchange="changeCfgValue(this)" type="text" class="tag ui-state-default ui-corner-all ui-helper-clearfix"/></td></tr>
+                                <tr><td>Tan. Acc.</td><td><div id="tangentialAcceleration"></div></td><td><input id="tangentialAccelerationTag" onchange="changeCfgValue(this)" type="text" class="tag ui-state-default ui-corner-all ui-helper-clearfix"/></td></tr>
+                                <tr><td>Tan. Acc. Var.</td><td><div id="tangentialAccelerationVar"></div></td><td><input id="tangentialAccelerationVarTag" onchange="changeCfgValue(this)" type="text" class="tag ui-state-default ui-corner-all ui-helper-clearfix"/></td></tr>
+                            </table>
+                            <table id="radialGroup" class="group">
+                                <caption><b>Radial Configuration</b></caption>
+                                <tr><td>Max. Rad.</td><td><div id="maxRadius"></div></td><td><input id="maxRadiusTag" onchange="changeCfgValue(this)" type="text" class="tag ui-state-default ui-corner-all ui-helper-clearfix"/></td></tr>
+                                <tr><td>Max. Rad. Var.</td><td><div id="maxRadiusVar"></div></td><td><input id="maxRadiusVarTag" onchange="changeCfgValue(this)" type="text" class="tag ui-state-default ui-corner-all ui-helper-clearfix"/></td></tr>
+                                <tr><td>Min. Rad.</td><td><div id="minRadius"></div></td><td><input id="minRadiusTag" onchange="changeCfgValue(this)" type="text" class="tag ui-state-default ui-corner-all ui-helper-clearfix"/></td></tr>
+                                <tr><td>Deg./Sec</td><td><div id="degreesPerSecond"></div></td><td><input id="degreesPerSecondTag" onchange="changeCfgValue(this)" type="text" class="tag ui-state-default ui-corner-all ui-helper-clearfix"/></td></tr>
+                                <tr><td>Deg./Sec Var.</td><td><div id="degreesPerSecondVar"></div></td><td><input id="degreesPerSecondVarTag" onchange="changeCfgValue(this)" type="text" class="tag ui-state-default ui-corner-all ui-helper-clearfix"/></td></tr>
+                            </table>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div style="float:left;">
+            <table>
+                <tr>
+                    <td>
+                        <div class="box cfgColorWidth">
+                            <p class="ui-state-default ui-corner-all ui-helper-clearfix" style="padding:2px;margin-left:5px;margin-right:5px;">
+                                <span class="ui-icon ui-icon-pencil" style="float:left; margin:-2px 5px 0 0;"></span>
+                                Start Color
+                            </p>
+                            <div id="startColor0" class="red"></div>
+                            <div id="startColor1" class="green"></div>
+                            <div id="startColor2" class="blue"></div>
+                            <div id="startColor3" class="alpha"></div>
+                            <div id="startColorPreview" class="ui-widget-content ui-corner-all preview"></div>
+                            <p class="ui-state-default ui-corner-all ui-helper-clearfix" style="padding:2px;margin-left:5px;margin-right:5px;">
+                                <span class="ui-icon ui-icon-pencil" style="float:left; margin:-2px 5px 0 0;"></span>
+                                Start Color Var.
+                            </p>
+                            <div id="startColorVar0" class="red"></div>
+                            <div id="startColorVar1" class="green"></div>
+                            <div id="startColorVar2" class="blue"></div>
+                            <div id="startColorVar3" class="alpha"></div>
+                            <div id="startColorVarPreview" class="ui-widget-content ui-corner-all preview"></div>
+                            <div style="clear:both;">&nbsp;</div>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div class="box cfgColorWidth">
+                            <p class="ui-state-default ui-corner-all ui-helper-clearfix" style="padding:2px;margin-left:5px;margin-right:5px;">
+                                <span class="ui-icon ui-icon-pencil" style="float:left; margin:-2px 5px 0 0;"></span>
+                                Finish Color
+                            </p>
+                            <div id="finishColor0" class="red"></div>
+                            <div id="finishColor1" class="green"></div>
+                            <div id="finishColor2" class="blue"></div>
+                            <div id="finishColor3" class="alpha"></div>
+                            <div id="finishColorPreview" class="ui-widget-content ui-corner-all preview"></div>
+                            <p class="ui-state-default ui-corner-all ui-helper-clearfix" style="padding:2px;margin-left:5px;margin-right:5px;">
+                                <span class="ui-icon ui-icon-pencil" style="float:left; margin:-2px 5px 0 0;"></span>
+                                Finish Color Var.
+                            </p>
+                            <div id="finishColorVar0" class="red"></div>
+                            <div id="finishColorVar1" class="green"></div>
+                            <div id="finishColorVar2" class="blue"></div>
+                            <div id="finishColorVar3" class="alpha"></div>
+                            <div id="finishColorVarPreview" class="ui-widget-content ui-corner-all preview"></div>
+                            <div style="clear:both;">&nbsp;</div>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </body>
+</html>
